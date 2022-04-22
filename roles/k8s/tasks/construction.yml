@@ -1,0 +1,88 @@
+---
+
+# This is for CentOS only!
+ - name: Allergic to swap
+   command:  swapoff -a
+
+     # The cloud VM's in the ACG "Cloud Playground" don't have swap, skipping this
+     # sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+
+     # Claims that Docker is installed already, skips straight to k8s
+
+ - name: Install repo-file for k8s
+   yum_repository:
+     name: kubernetes
+     description: Repo for Kubernetes
+     baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+     file: kubernetes
+     gpgcheck: yes
+     repo_gpgcheck: yes
+     gpgkey: https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+     exclude: kube*
+
+ - name: Install kubelet, kubeadm, and kubectl
+   yum: 
+    name: ['kubelet-1.11.3', 'kubeadm-1.11.3', 'kubectl-1.11.3']
+    state: installed
+    disable_excludes: all
+
+ - name: Enable and start the kubelet service
+   systemd: 
+    name:  kubelet
+    state: started
+    enabled: yes
+
+ - name: Configure sysctl parameters
+   sysctl:
+      name: "{{ item }}"
+      value: 1
+      state: present
+      files: /etc/sysctl.d/k8s.conf
+      reload: yes
+   loop: 
+      - net.bridge.bridge-nf-call-ip6tables
+      - net.bridge.bridge-nf-call-iptables
+
+ - name: Copy kube-config.yml
+   copy: 
+     src: kube-config.yml
+     dest: /root/
+
+ - name: Initialize, using kube-config.yml
+   command: kubeadm  init --config kube-config.yml
+ 
+# These lines are output from the init, above  
+#mkdir /root/.kube 
+ - name: Create /root/.kube directory
+   file: name=/root/.kube type=directory
+
+# cp -i  /etc/kubernetes/admin.conf /root/.kube/config
+# chown root:root /root/.kube/config
+# This is probably not the right way to copy files, when both are on the remote
+ - name: Copy /etc/kubernetes/admin.conf to /root/.kube/config
+   copy: 
+     src: /etc/kubernetes/admin.conf
+     dest: /root/.kube/config
+   
+# Also in that output, is a command we need to keep for later, with the "Join Token"... Maybe refer to your MicroK8s role for how to handle this! 
+# kubeadm join <ip>:<port> --token <the-ugly-token>  
+
+ - name: Install Flannel
+   command: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.9.1/Documentation/kube-flannel.yml
+
+# @ 05:00 video playback  timecode
+# In this file: /etc/kubernetes/flannel/manifest/kube-controller-manager - you need these lines, but they've probably been fixed by this time
+  # - --allocate-node-cidrs=true
+  # - --cluster-cidr=10.244.0.0/16
+# `systemctl restart kubelet` if you made changes
+
+# @ 05:50 timecode 
+# on the worker node: 
+  # Repeat all the steps; stop when you `kubeadm init ...`
+  # @06:47 timecode, he's issuing the join command
+  
+# Validation: 
+# `kubectl get master` to make sure you've got one "master" node, and another with Roles=<none> (that's the worker); both with Status=Ready
+# `kubectl get pods -n kube-system` namespace; this has 10 pods including coredns, etcd, controller-manager, apiserver, flannel, proxy, & scheduler
+
+

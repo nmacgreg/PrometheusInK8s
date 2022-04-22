@@ -1,0 +1,9 @@
+---
+
+# Ref: ansible-confg/shared-roles/microk8s/ and ~/projects/microk8s-cluster
+ - name: Set up k8s cluster
+   hosts: all_nodes
+   gather_facts: yes
+   remote_user: root
+   roles: 
+     - { role: 'k8s', tags: k8s } 

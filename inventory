@@ -1,0 +1,10 @@
+[all_nodes:children]
+master_blaster
+worker_blaster
+
+[master_blaster]
+master
+
+[worker_blaster]
+worker
+
