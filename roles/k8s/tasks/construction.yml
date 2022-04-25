@@ -17,12 +17,13 @@
      file: kubernetes
      gpgcheck: yes
      repo_gpgcheck: yes
-     gpgkey: https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+     gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
      exclude: kube*
 
  - name: Install kubelet, kubeadm, and kubectl
    yum: 
-    name: ['kubelet-1.11.3', 'kubeadm-1.11.3', 'kubectl-1.11.3']
+     #name: ['kubelet-1.11.3', 'kubeadm-1.11.3', 'kubectl-1.11.3']
+    name: ['kubelet', 'kubeadm', 'kubectl']
     state: installed
     disable_excludes: all
 
@@ -35,9 +36,9 @@
  - name: Configure sysctl parameters
    sysctl:
       name: "{{ item }}"
-      value: 1
+      value: '1'
       state: present
-      files: /etc/sysctl.d/k8s.conf
+      sysctl_file: /etc/sysctl.d/k8s.conf
       reload: yes
    loop: 
       - net.bridge.bridge-nf-call-ip6tables
@@ -49,7 +50,7 @@
      dest: /root/
 
  - name: Initialize, using kube-config.yml
-   command: kubeadm  init --config kube-config.yml
+   command: kubeadm  init --config /root/kube-config.yml
  
 # These lines are output from the init, above  
 #mkdir /root/.kube 
